@@ -5,7 +5,7 @@ app="${0#"./05-"}"
 app="${app%"_app"}"
 
 BORG_PASSPHRASE="$(yunohost app setting $app passphrase)"
-repo="$(yunohost app setting $app repository)"   #$4
+repos="$(yunohost app setting $app repository)"   #$4
 if ssh-keygen -F "__SERVER__" >/dev/null ; then
     BORG_RSH="ssh -i /root/.ssh/id_${app}_ed25519 -oStrictHostKeyChecking=yes "
 else
@@ -78,20 +78,23 @@ name="$3"
 size="$5"
 description="$6"
 
-case "$1" in
-  need_mount)
-    do_need_mount "$work_dir" "$name" "$repo" "$size" "$description"
-    ;;
-  backup)
-    do_backup "$work_dir" "$name" "$repo" "$size" "$description"
-    ;;
-  mount)
-    do_mount
-    ;;
-  *)
-    echo "hook called with unknown argument \`$1'" >&2
-    exit 1
-    ;;
-esac
+while IFS= read -r line || [[ -n $repo ]]; do
+  case "$1" in
+    need_mount)
+      do_need_mount "$work_dir" "$name" "$repo" "$size" "$description"
+      ;;
+    backup)
+      do_backup "$work_dir" "$name" "$repo" "$size" "$description"
+      ;;
+    mount)
+      # Work to do here to make it work in case of multiple destination, do we need to mount them all or only one ? And if one, which one ?
+      do_mount "$work_dir" "$name" "$repo" "$size" "$description"
+      ;;
+    *)
+      echo "hook called with unknown argument \`$1'" >&2
+      exit 1
+      ;;
+  esac
+done < <(printf '%s' "$repos")
 
 exit 0
